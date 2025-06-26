@@ -78,6 +78,17 @@ void UartTerminalProcess_c::main(void)
 
         rxPtr = 0;
       }
+      else if(rxBuffer[rxPtr - 1] == 0x7F) /* DEL */
+      {
+        if(rxPtr > 1)
+        {
+          rxPtr -= 2;
+        }
+        else
+        {
+          rxPtr = 0;
+        }
+      }
     }
     else
     {

@@ -8,6 +8,11 @@
 #include "HeapManager.hpp"
 
 
+#define HEAP_OVERWRITE_DETECTION 1
+#define BYTES_START 8
+#define BYTES_STOP 8
+#define BYTE_START 0x55
+#define BYTE_STOP 0xCC
 
 
 
@@ -87,12 +92,19 @@ void* HeapManager_c::Malloc( size_t xWantedSize , int id_)
       elementPayloadSize = allowedSizes[listIterator];
       elementTotalSize = elementPayloadSize + sizeof(struct elementInfo_st);
 
+      #if HEAP_OVERWRITE_DETECTION == 1
+      elementTotalSize += BYTES_START + BYTES_STOP; 
+      #endif
+
    
       if(memoryList[listIterator].noOfFree>0)
       {
         /*get from this list */
         pvReturn = (uint8_t*)memoryList[listIterator].first;
         pvReturn += sizeof(struct elementInfo_st); /*header shift*/
+        #if HEAP_OVERWRITE_DETECTION == 1
+        pvReturn += BYTES_START;
+        #endif
         elementInfo = memoryList[listIterator].first;
         memoryList[listIterator].first = elementInfo ->next;
         memoryList[listIterator].noOfFree--;
@@ -145,6 +157,24 @@ void* HeapManager_c::Malloc( size_t xWantedSize , int id_)
           #if STORE_EXTRA_MEMORY_STATS == 1
           elementInfo->nextAlloc = memoryList[listIterator].firstAlloc;
           memoryList[listIterator].firstAlloc = elementInfo;
+          #endif
+
+          #if HEAP_OVERWRITE_DETECTION == 1
+
+
+          for(int i=0; i< BYTES_START ; i++)
+          {
+            *pvReturn = BYTE_START;
+            pvReturn++;
+          }
+
+          uint8_t* stopPtr = pvReturn + elementPayloadSize;
+
+          for(int i=0; i< BYTES_STOP ; i++)
+          {             
+            *stopPtr = BYTE_STOP;
+            stopPtr++;
+          }
           #endif
         }
         else
@@ -257,6 +287,7 @@ void* HeapManager_c::Malloc( size_t xWantedSize , int id_)
     }
   }
   /*printf("alloc %X %d\n",pvReturn,xWantedSize);*/
+
   return (void*)pvReturn;
 }
 
@@ -273,8 +304,29 @@ void HeapManager_c::Free( void *pv )
 
   if( puc != nullptr )
   {
+    #if HEAP_OVERWRITE_DETECTION == 1
+
+    /* check stop bytes */
+
+    uint8_t* stopPtr = puc;
+    puc -= BYTES_START;
+
+    /* check start bytes */
+
+    for(int i=0;i<BYTES_START;i++)
+    {
+      if(puc[i] != BYTE_START)
+      {
+        printf("start bytes mismath\n");
+      }
+    }
+
+    #endif
+
     puc -= sizeof(struct elementInfo_st); /*restore header*/
     elementInfo = (struct elementInfo_st*) (puc);
+
+
 /*
     while(allowedSizes[listIterator]<(elementInfo->size-sizeof(struct elementInfo_st)))
     {
@@ -293,6 +345,17 @@ void HeapManager_c::Free( void *pv )
 
     size_t elementPayloadSize = allowedSizes[listIterator];
     size_t elementTotalSize = elementPayloadSize + sizeof(struct elementInfo_st);
+
+    #if HEAP_OVERWRITE_DETECTION == 1
+    stopPtr += elementPayloadSize;
+    for(int i=0;i<BYTES_STOP;i++)
+    {
+      if(stopPtr[i] != BYTE_STOP)
+      {
+        printf("stop bytes mismath\n");
+      }
+    }
+    #endif
     
     if((portNVIC_INT_CTRL_REG & 0x1F)==0)
     {
@@ -367,6 +430,9 @@ uint8_t HeapManager_c::GetManagerId(void* pv)
   {
     uint8_t *puc = ( uint8_t * ) pv;
     puc -= sizeof(struct elementInfo_st); /*restore header*/
+    #if HEAP_OVERWRITE_DETECTION == 1
+    puc -= BYTES_START;
+    #endif
     elementInfo = (struct elementInfo_st*) (puc);
     return  elementInfo->blockNo>>4;
   }
