@@ -101,7 +101,7 @@ EthernetRxProcess_c::EthernetRxProcess_c(void)
   }
   //xTXDescriptorSemaphore = NULL;
 
-  if( xTaskCreate( MainRxWrapper, "EMAC_RX", configEMAC_TASK_STACK_SIZE, this, niEMAC_HANDLER_TASK_PRIORITY, &rxTask ) != pdPASS )
+  if( xTaskCreate( MainRxWrapper, "EMAC_RX", configEMAC_TASK_STACK_SIZE, this, 6, &rxTask ) != pdPASS )
   {
       Error_Handler();
   }
