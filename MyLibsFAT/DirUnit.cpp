@@ -151,7 +151,7 @@ uint32_t DirUnit_c::GetDirStartCluster(char* path,bool createIfNotExists)
     else
     {
 
-      EntryData_st* entryData = FindEntry(dirNameTmp,actDirCluster);
+      EntryData_st* entryData = FindEntry2(dirNameTmp,actDirCluster);
       if(entryData != nullptr)
       {
         actDirCluster = entryData->firstCluster;
@@ -184,6 +184,9 @@ uint32_t DirUnit_c::GetDirStartCluster(char* path,bool createIfNotExists)
 EntryData_st* DirUnit_c::FindEntry(char* name, uint32_t currentDirStartCluster)
 {
   int entryIdx = 0;
+
+  //printf("FindEntry %s, CL=%d\n",name,currentDirStartCluster);
+
   bool found = false;
   EntryData_st* entryBuf = new EntryData_st;
 
@@ -221,6 +224,58 @@ EntryData_st* DirUnit_c::FindEntry(char* name, uint32_t currentDirStartCluster)
  // return entryBuf;
 }
 
+EntryData_st* DirUnit_c::FindEntry2(char* name, uint32_t currentDirStartCluster)
+{
+
+  int entryIdx = 0;
+
+  //printf("FindEntry2 %s, CL=%d\n",name,currentDirStartCluster);
+
+  bool found = false;
+  EntryData_st* entryBuf = new EntryData_st;
+
+  SearchEntryData_c searchData;
+
+
+  searchData.entryClusterBuffer = new uint8_t[disk_p->fatUnit.GetSectorsPerCluster() * 512];
+  searchData.cluster = CLUSTER_NOT_VALID;
+  searchData.clusterIdx = 0;  
+
+  while(found == false)
+  {
+    entryIdx = GetNextEntry2(entryBuf, &searchData,  currentDirStartCluster,entryIdx);
+
+    if(entryIdx >= 0)
+    {
+      //printf("Found entry (%s)\n",entryBuf->name);
+      if(strcmp(name,entryBuf->name) == 0)
+      {
+        found = true;
+        break;
+      }
+
+    }
+    else
+    {
+      break;
+    }
+
+
+  }
+
+  delete[] searchData.entryClusterBuffer;
+
+  if(found == false)
+  {
+    delete entryBuf;
+    entryBuf = nullptr;
+  }
+  return entryBuf;
+
+
+
+}
+
 int DirUnit_c::GetNextEntry(EntryData_st* entryBuf, uint32_t currentDirStartCluster, int startEntryNr)
 {
 
@@ -249,6 +304,154 @@ int DirUnit_c::GetNextEntry(EntryData_st* entryBuf, uint32_t currentDirStartClus
     }
 
     DirEntry_st* dirEntry = (DirEntry_st*) &clusterBuffer[32*entryIdx];
+
+    if(dirEntry->name[0] == 0)
+    {
+      /* end of directory*/
+      break;      
+    }
+    else if(dirEntry->name[0] == 0xE5)
+    {
+      /* empty entry, skip it*/
+    }
+    else if(dirEntry->attributes == 0x0F)
+    {
+      /* long file entry */
+
+      uint8_t lfnNo = dirEntry->raw[0];
+      lfnNo &= 0x0F;
+
+      if(dirEntry->raw[0] & 0x40) { entryBuf->name[13*lfnNo] = 0; }
+
+      if(lfnNo > 0 ) { lfnNo--; }      
+
+      for(int i=0;i<13;i++)
+      {
+        entryBuf->name[i+(13*lfnNo)] = dirEntry->raw[ lfdPositions[i] ];
+      } 
+      
+      lfnChecksum = dirEntry->raw[0x0D];
+      lfnFound = true;
+
+      if(dirEntry->raw[0] & 0x40)
+      {
+        entryBuf->entryLocation.entryStartIdx = currentEntryNr;
+        entryBuf->entryLocation.entryLength = 0;
+        entryBuf->entryLocation.dirStartCluster = currentDirStartCluster;
+      }
+      entryBuf->entryLocation.entryLength++;
+
+
+    }
+    else
+    {
+      /* normal entry */
+
+      uint8_t dosNameChecksum = GetDosNameChecksum(dirEntry->raw);
+
+      if((lfnFound == false)||(dosNameChecksum != lfnChecksum))
+      {
+        /* use DOS name */
+        uint8_t pos = 0;
+        for(int i=0;i<8;i++)
+        {
+          if(dirEntry->name[i] != ' ')
+          {
+            char c = dirEntry->name[i];
+            if((dirEntry->type & 0x08) && (c >= 'A') && (c <= 'Z'))
+            {
+              c += ('a' - 'A');
+            }
+            entryBuf->name[i] = c;
+            pos++;
+          }
+          else
+          {
+            break;
+          }
+        }
+        if(dirEntry->attributes & FF_FAT_ATTR_DIR)
+        {
+          entryBuf->name[pos] = 0;
+        }
+        else
+        {
+          entryBuf->name[pos++] = '.';
+          for(int i=0;i<3;i++)
+          {
+            char c = dirEntry->nameExtension[i];
+            if((dirEntry->type & 0x10) && (c >= 'A') && (c <= 'Z'))
+            {
+              c += ('a' - 'A');
+            }
+            entryBuf->name[pos++] = c;
+
+          }
+          entryBuf->name[pos] = 0;
+        }
+        entryBuf->entryLocation.entryStartIdx = currentEntryNr;
+        entryBuf->entryLocation.entryLength = 0;
+        entryBuf->entryLocation.dirStartCluster = currentDirStartCluster;
+      }
+      entryBuf->entryLocation.entryLength++;
+
+      entryBuf->attributes = dirEntry->attributes;
+      entryBuf->fileSize = dirEntry->size;
+      entryBuf->firstCluster = dirEntry->clusterH << 16 | dirEntry->clusterL;
+
+      GetEntryTime(&dirEntry->creationTime,&dirEntry->creationDate,&entryBuf->creationTime);
+      GetEntryTime(&dirEntry->modificationTime,&dirEntry->modificationDate,&entryBuf->modificationTime);
+      GetEntryTime(nullptr,&dirEntry->lastAccessDate,&entryBuf->accessTime);
+
+      entryFetched = true;
+
+    }
+    currentEntryNr ++; 
+  }
+
+  //uint32_t sectorToOpen = 
+
+
+  if(entryFetched)
+  {
+    return currentEntryNr;
+  }
+  else
+  {
+    return -1;
+  }
+}
+
+
+int DirUnit_c::GetNextEntry2(EntryData_st* entryBuf, SearchEntryData_c* searchData, uint32_t currentDirStartCluster, int startEntryNr)
+{
+
+  bool entryFetched = false;
+
+  uint32_t currentEntryNr = startEntryNr;
+
+  uint8_t lfnChecksum;
+  bool lfnFound = false;
+
+  while(entryFetched == false)
+  {
+    uint32_t clusterIdx = currentEntryNr / NoOfEntriesPerCluster();
+    uint32_t entryIdx = currentEntryNr % NoOfEntriesPerCluster();
+
+    if((searchData->cluster == CLUSTER_NOT_VALID) || ( searchData->clusterIdx != clusterIdx))
+    {
+      searchData->cluster = disk_p->fatUnit.GetClusterFromChain(currentDirStartCluster,clusterIdx);
+      if(searchData->cluster == CLUSTER_NOT_VALID)
+      {
+        break;
+      }
+      else
+      {
+        searchData->clusterIdx = clusterIdx;
+        disk_p->ReadCluster(searchData->entryClusterBuffer,searchData->cluster);
+      }
+    }
+    DirEntry_st* dirEntry = (DirEntry_st*) &searchData->entryClusterBuffer[32*entryIdx];
 
     if(dirEntry->name[0] == 0)
     {
@@ -911,7 +1114,7 @@ bool DirUnit_c::MkDir( char *dirPath )
   /* check if dir exists */
 
 
-  EntryData_st* entryData =  FindEntry(dirName, workingDirCluster);
+  EntryData_st* entryData =  FindEntry2(dirName, workingDirCluster);
   if(entryData!= nullptr)
   {
     delete entryData;
@@ -943,7 +1146,7 @@ bool DirUnit_c::RmDir( char *dirPath )
 
   /* check if directory exists */
 
-  EntryData_st* entryData =  FindEntry(dirName, workingDirCluster);
+  EntryData_st* entryData =  FindEntry2(dirName, workingDirCluster);
   if(entryData== nullptr)
   {    
     return false;
@@ -1013,7 +1216,7 @@ bool DirUnit_c::RemoveFile( char *filePath )
 
   /* check if directory exists */
 
-  EntryData_st* entryData =  FindEntry(fileName, workingDirCluster);
+  EntryData_st* entryData =  FindEntry2(fileName, workingDirCluster);
   if(entryData== nullptr)
   {    
     return false;
@@ -1063,7 +1266,7 @@ bool DirUnit_c::Rename( char * oldName, char * newName)
     return false;
   }
 
-  EntryData_st* entryData =  FindEntry(fileNameNew, workingDirClusterNew);
+  EntryData_st* entryData =  FindEntry2(fileNameNew, workingDirClusterNew);
   if(entryData != nullptr)
   {    
     delete entryData;
@@ -1084,7 +1287,7 @@ bool DirUnit_c::Rename( char * oldName, char * newName)
     return false;
   }
 
-  entryData =  FindEntry(fileNameOld, workingDirClusterOld);
+  entryData =  FindEntry2(fileNameOld, workingDirClusterOld);
   if(entryData == nullptr)
   {    
     return false;

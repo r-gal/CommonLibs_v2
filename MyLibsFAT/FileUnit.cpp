@@ -118,13 +118,15 @@ bool File_c::Open( const char * file, const char * mode )
     delete dirUnit;
     dirUnit = nullptr;
     delete[] absPath;
+    #if FAT_DEBUG >= 1
     printf("FILESYS: workingDirCluster null\n");
+    #endif
     return false;
   }
 
   
 
-  fileEntry = dirUnit->FindEntry(fileName,  workingDirCluster);
+  fileEntry = dirUnit->FindEntry2(fileName,  workingDirCluster);
 
   if(fileEntry == nullptr)
   {
@@ -133,7 +135,9 @@ bool File_c::Open( const char * file, const char * mode )
       delete dirUnit;
       dirUnit = nullptr;
       delete[] absPath;
+      #if FAT_DEBUG >= 1
       printf("FILESYS: fileEntry null\n");
+      #endif
       return false;
     }
     else

@@ -95,6 +95,8 @@ class FatUnit_c
 
   bool GetNewClusters(uint32_t* clustersArray, uint32_t noOfClusters, uint32_t actChainEndCluster);
   bool ReleaseClusters(uint32_t firstCluster, uint32_t wantedChainEndCluster);
+
+  int ReadClustersChain(uint32_t startCluster, uint32_t* clustersChain, uint32_t size);
 };
 
 

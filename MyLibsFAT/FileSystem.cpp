@@ -141,6 +141,13 @@ File_c* FileSystem_c::OpenFile( const char * file, const char * mode )
   }
 }
 
+bool FileSystem_c::FileExists(const char * pcFile)
+{
+  printf("Not impelemented! \n");
+  return false;
+
+}
+
 bool FileSystem_c::Remove( const char * fileName)
 {
   bool res = false;

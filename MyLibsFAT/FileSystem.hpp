@@ -60,6 +60,7 @@ class FileSystem_c
   static bool RmDir( const char *dirName );
 
   static File_c* OpenFile( const char * pcFile, const char * pcMode );
+  static bool FileExists(const char * pcFile);
   static bool Remove( const char * fileName);
 
   static bool Rename( const char * oldName, const char * newName);

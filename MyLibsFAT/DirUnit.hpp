@@ -90,7 +90,16 @@ class FindData_c
 };
 
 
+class SearchEntryData_c
+{
+  public:
+  uint8_t* entryClusterBuffer;
+  uint32_t cluster;    /* absolute cluster nr */
+  uint32_t clusterIdx; /* cluster index in directory */
 
+
+
+};
 
 
 
@@ -113,8 +122,10 @@ class DirUnit_c
   DirUnit_c(Disk_c* disk_p_);
   ~DirUnit_c(void);
   EntryData_st* FindEntry(char* name, uint32_t currentDirStartCluster);
+  EntryData_st* FindEntry2(char* name, uint32_t currentDirStartCluster);
   uint32_t GetDirStartCluster(char* path,bool createIfNotExists);
   int GetNextEntry(EntryData_st* entryBuf, uint32_t currentDirStartCluster, int startEntryIdx);
+  int GetNextEntry2(EntryData_st* entryBuf, SearchEntryData_c* searchData, uint32_t currentDirStartCluster, int startEntryIdx);
 
   bool CheckIfDosNameExists(uint32_t currentDirCluster, char* dosName);
 

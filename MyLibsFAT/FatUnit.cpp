@@ -185,6 +185,10 @@ uint32_t FatUnit_c::GetNextCluster(uint32_t actCluster)
 
 uint32_t FatUnit_c::GetClusterFromChain(uint32_t firstCluster, uint32_t clusterNr)
 {
+  #if FAT_DEBUG >= 2
+  printf("GetClusterFromChain, first=%d, clusterNr=%d\n",firstCluster, clusterNr);
+  #endif
+
   uint32_t retCluster = firstCluster;
 
   if(clusterNr > 0)
@@ -210,6 +214,9 @@ uint32_t FatUnit_c::GetClusterFromChain(uint32_t firstCluster, uint32_t clusterN
 
     xSemaphoreGiveRecursive(fatMutex);
   }
+  #if FAT_DEBUG >= 2
+  printf("GetClusterFromChain end\n");
+  #endif
 
   if((retCluster & 0x0FFFFFFF) >= 0x0FFFFFF0)
   {
@@ -224,7 +231,9 @@ uint32_t FatUnit_c::GetClusterFromChain(uint32_t firstCluster, uint32_t clusterN
 
 uint32_t FatUnit_c::FindNextFreeCluster(uint32_t startCluster)
 {
-
+  #if FAT_DEBUG >= 2
+  printf("FindNextFreeCluster, first=%d, \n",startCluster);
+  #endif
   for(uint32_t cluster = startCluster;cluster<noOfClusters;cluster++)
   {
     uint32_t wantedSector = cluster/128;
@@ -238,9 +247,15 @@ uint32_t FatUnit_c::FindNextFreeCluster(uint32_t startCluster)
 
     if(sBuffer[cluster % 128] == 0)
     {
+      #if FAT_DEBUG >= 2
+  printf("FindNextFreeCluster end, cluster = %d\n",cluster);
+  #endif
       return cluster;
     }
   }
+  #if FAT_DEBUG >= 2
+  printf("FindNextFreeCluster failed\n");
+  #endif
   return CLUSTER_NOT_VALID;
 }
 
@@ -469,4 +484,44 @@ bool FatUnit_c::ReleaseClusters(uint32_t firstCluster, uint32_t wantedChainEndCl
     printf("FAT released %d clusters  \n",clustersCnt);
   #endif
   return true;
+}
+
+
+
+int FatUnit_c::ReadClustersChain(uint32_t firstCluster, uint32_t* clustersChain, uint32_t size)
+{
+  int clusters = 0;
+  
+
+  xSemaphoreTakeRecursive( fatMutex, ( TickType_t )  portMAX_DELAY );
+
+
+  uint32_t cluster = firstCluster;
+
+
+  while(cluster < 0x0FFFFFF0 &&  cluster>=2)
+  {
+    clustersChain[clusters] = cluster;
+    clusters++;
+    uint32_t wantedSector = cluster/128;
+    wantedSector += fatStartSector;
+    if(sectorIdx != wantedSector)
+    {
+      interface_p->Read((uint8_t*)sBuffer,wantedSector,1);
+      sectorIdx = wantedSector;
+    }
+    cluster = sBuffer [cluster % 128];
+
+    
+    if(clusters >= size) 
+    {
+      break;
+    }
+  }
+
+
+
+  xSemaphoreGiveRecursive(fatMutex);
+
+  return clusters;
 }
