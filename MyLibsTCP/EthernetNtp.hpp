@@ -64,7 +64,7 @@ class NTP_c: public SocketUdp_c
 };
 
 /*****************command section **************************/
-#if USE_COMMANDS == 1
+#if CONF_USE_COMMANDS == 1
 class Com_ntp : public Command_c
 {
   public:

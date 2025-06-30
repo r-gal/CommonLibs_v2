@@ -239,7 +239,7 @@ uint32_t NTP_c::GetServerIp(uint8_t idx)
 
 /*****************command section **************************/
 
-#if USE_COMMANDS
+#if CONF_USE_COMMANDS
 CommandNtp_c commandNtp;
 
 comResp_et Com_ntp::Handle(CommandData_st* comData)

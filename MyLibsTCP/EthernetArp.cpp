@@ -193,7 +193,7 @@ void Arp_c::Tick1s(void)
 
 /*****************command section **************************/
 
-#if USE_COMMANDS == 1
+#if CONF_USE_COMMANDS == 1
 
 
 CommandArp_c commandArp;

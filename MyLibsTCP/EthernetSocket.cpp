@@ -195,7 +195,7 @@ void SocketSet_c::RemoveSocket(Socket_c* socket_)
 
 /*****************command section **************************/
 
-#if USE_COMMANDS == 1
+#if CONF_USE_COMMANDS == 1
 
 CommandSocket_c commandSocket;
 

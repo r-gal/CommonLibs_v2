@@ -53,7 +53,7 @@ class IpConfig_c
 };
 
 /*****************command section **************************/
-#if USE_COMMANDS == 1
+#if CONF_USE_COMMANDS == 1
 
 class Com_ipconfig : public Command_c
 {

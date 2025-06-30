@@ -33,7 +33,7 @@ TcpWindowRx_c::~TcpWindowRx_c(void)
   if(buffer != nullptr) 
   { 
     #if SET_SOCKET_BUFFERIN_CCM == 1
-    vPortFreeStack(buffer);
+    FreeToCCM(buffer);
     #else
     delete[] buffer;
     #endif
@@ -54,7 +54,7 @@ void TcpWindowRx_c::InitWindow(uint32_t startSeqNo, uint32_t bufferSize)
 
   bufferMasc = bufferSize-1;
   #if SET_SOCKET_BUFFERIN_CCM == 1
-  buffer = (uint8_t*)pvPortMallocStack(bufferSize);
+  buffer = (uint8_t*)AllocFromCCM(bufferSize);
   #else
   buffer = new uint8_t[bufferSize];
   #endif

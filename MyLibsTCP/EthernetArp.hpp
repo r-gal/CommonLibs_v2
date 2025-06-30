@@ -44,7 +44,7 @@ class Arp_c :public MAC_c
 
 /*****************command section **************************/
 
-#if USE_COMMANDS == 1
+#if CONF_USE_COMMANDS == 1
 class Com_arp : public Command_c
 {
   public:

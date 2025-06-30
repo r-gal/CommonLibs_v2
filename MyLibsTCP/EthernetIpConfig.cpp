@@ -147,7 +147,7 @@ void IpConfig_c::PrintIpConfig(char* buffer,ipConf_st* conf_p)
 
 /*****************command section **************************/
 
-#if USE_COMMANDS == 1
+#if CONF_USE_COMMANDS == 1
 
 CommandIp_c commandIp;
 
@@ -237,7 +237,7 @@ void IpConfig_c::UseAdministeredConfiguration(void)
 
 void IpConfig_c::PrintIp(char* strBuffer,uint32_t ip, char* name)
 {
-  sprintf(strBuffer,"%s%d:%d:%d:%d",name,(ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,(ip)&0xFF);
+  sprintf(strBuffer,"%s%d.%d.%d.%d",name,(ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,(ip)&0xFF);
 
 
 }

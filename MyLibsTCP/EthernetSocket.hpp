@@ -83,7 +83,7 @@ class SocketSet_c
 
 /*****************command section **************************/
 
-#if USE_COMMANDS == 1
+#if CONF_USE_COMMANDS == 1
 class Com_socketlist : public Command_c
 {
   public:
