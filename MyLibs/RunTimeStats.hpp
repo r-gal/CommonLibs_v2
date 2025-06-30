@@ -41,7 +41,10 @@ class RunTime_c
 
   bool Print(char* buffer,uint8_t idx);
 
+  static int GetTaskIdx(TaskHandle_t task);
+
 };
+
 
 #if CONF_USE_COMMANDS == 1
 

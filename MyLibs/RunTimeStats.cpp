@@ -244,6 +244,24 @@ bool RunTime_c::Print(char* strBuf, uint8_t i)
 
 
 }
+
+
+int RunTime_c::GetTaskIdx(TaskHandle_t task)
+{
+  if(ownPtr != nullptr)
+  {
+    for(int i=0;i<configRUNTIME_MAX_NO_OF_TASKS;i++)
+    {
+      if( ownPtr->taskList[i] == task)
+      {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
+
 #if CONF_USE_COMMANDS == 1
 
 comResp_et Com_runtime::Handle(CommandData_st* comData)
